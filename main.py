@@ -249,18 +249,18 @@ class PostMaker():
 
         # TODO: convert to numpy
         # chosen with https://cubic-bezier.com/
-        ease = self._create_cubic_bezier(1, -0.24, .84, -2.79)
+        ease = self._create_cubic_bezier(1, 0, 1, -2)
         for i in range(c_height+1):
             p = i/c_height
             eased = ease(p)
-            alpha = int(255 * (1-eased))
+            alpha = int(255 * eased)
             draw.line([(0, i), (c_width, i)], fill=(
                 color_values[0], color_values[1], color_values[2], alpha))
 
         if start[1] > end[1]:
             starty = end[1] + 2
-            gradient_image = gradient_image.rotate(180)
         else:
+            gradient_image = gradient_image.rotate(180)
             starty = start[1] - 2
 
         gradient_image_bytes = self._convert_image_to_bytes(gradient_image)
@@ -291,7 +291,7 @@ class PostMaker():
         # Draw gradient over background image
         upper_space = (0, padding[1])
         lower_space = (0, canvas_height - padding[1])
-        fade_length = int((canvas_height-padding[1]) * 0.7)
+        fade_length = int((canvas_height-padding[1]) * 0.9)
 
         self._apply_gradient(canvas, fg_color_hex,
                              lower_space, (0, canvas_height - fade_length))
