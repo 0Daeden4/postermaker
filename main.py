@@ -249,7 +249,7 @@ class PostMaker():
 
         # TODO: convert to numpy
         # chosen with https://cubic-bezier.com/
-        ease = self._create_cubic_bezier(1, -0.5, 0, 0)
+        ease = self._create_cubic_bezier(1, -0.24, .84, -2.79)
         for i in range(c_height+1):
             p = i/c_height
             eased = ease(p)
@@ -291,7 +291,7 @@ class PostMaker():
         # Draw gradient over background image
         upper_space = (0, padding[1])
         lower_space = (0, canvas_height - padding[1])
-        fade_length = int((canvas_height-padding[1]) * 0.55)
+        fade_length = int((canvas_height-padding[1]) * 0.7)
 
         self._apply_gradient(canvas, fg_color_hex,
                              lower_space, (0, canvas_height - fade_length))
