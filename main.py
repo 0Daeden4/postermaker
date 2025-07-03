@@ -239,7 +239,7 @@ class PostMaker():
         return lambda t: p1*(1-t)**3 + t*3*p2*(1-t)**2 + (t**2)*p3*(1-t)*3 + p4*t**3
 
     def _apply_gradient(self, canvas: c.Canvas, color: str, start: tuple[int, int], end: tuple[int, int]) -> None:
-        c_width, c_height = canvas._pagesize
+        c_width, _ = canvas._pagesize
         color_values = ImageColor.getrgb(color)
         gradient_size = (c_width, max(
             start[1], end[1]) - min(start[1], end[1]))
@@ -249,9 +249,9 @@ class PostMaker():
 
         # TODO: convert to numpy
         # chosen with https://cubic-bezier.com/
-        ease = self._create_cubic_bezier(1, 0, 1, -2)
-        for i in range(c_height+1):
-            p = i/c_height
+        ease = self._create_cubic_bezier(0, .7, .9, 1)
+        for i in range(gradient_size[1]+1):
+            p = 1 - (i/gradient_size[1])
             eased = ease(p)
             alpha = int(255 * eased)
             draw.line([(0, i), (c_width, i)], fill=(
@@ -288,16 +288,6 @@ class PostMaker():
         if bg_image:
             self._place_bg_image(canvas, bg_image, padding)
 
-        # Draw gradient over background image
-        upper_space = (0, padding[1])
-        lower_space = (0, canvas_height - padding[1])
-        fade_length = int((canvas_height-padding[1]) * 0.9)
-
-        self._apply_gradient(canvas, fg_color_hex,
-                             lower_space, (0, canvas_height - fade_length))
-        self._apply_gradient(canvas, bg_color_hex,
-                             upper_space, (0, fade_length))
-
         # Draw rectangle over background image
         rect_size = (canvas_width, padding[1])
         bg_color = HexColor(bg_color_hex)
@@ -311,6 +301,16 @@ class PostMaker():
         canvas.setStrokeColor(fg_color)
         canvas.rect(0, canvas_height-padding[1],
                     rect_size[0], rect_size[1], stroke=1, fill=1)
+
+        # Draw gradient over background image
+        upper_space = (0, padding[1])
+        lower_space = (0, canvas_height - padding[1])
+        fade_length = int(canvas_height*0.51)
+
+        self._apply_gradient(canvas, fg_color_hex,
+                             lower_space, (0, canvas_height - fade_length))
+        self._apply_gradient(canvas, bg_color_hex,
+                             upper_space, (0, fade_length))
 
         self._write_event_info(canvas, event_information,
                                bg_color_hex, fg_color_hex, padding)
