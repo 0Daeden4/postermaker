@@ -101,7 +101,7 @@ class PostMaker():
         if not self.place_bbox or not self.date_bbox:
             desired_size = (c_width//5, int(c_height//5.4))
         else:
-            x_space = c_width - \
+            x_space = c_width - 10 - \
                 int(max(self.date_bbox["x"] + self.date_bbox["width"],
                     self.place_bbox["x"] + self.place_bbox["width"]))
             inverse_ratio = logo_image.height/logo_image.width
@@ -120,7 +120,7 @@ class PostMaker():
         buffer = BytesIO(resized_logo_image_bytes)
         buffer.seek(0)
         logo = ImageReader(buffer)
-        canvas.drawImage(logo, c_width - (resized_logo_image.width + 5),
+        canvas.drawImage(logo, c_width - resized_logo_image.width,
                          0, width=dw, height=dh, mask='auto')
 
     def _register_font(self, font_path: str | Path) -> str:
