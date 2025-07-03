@@ -1,3 +1,5 @@
-pillow==11.2.1
+charset-normalizer==3.4.2
+pdf2image==1.17.0
+pillow==11.3.0
 qrcode==8.2
-svgwrite==1.4.3
+reportlab==4.4.2
