@@ -305,7 +305,7 @@ class PostMaker():
         # Draw gradient over background image
         upper_space = (0, padding[1])
         lower_space = (0, canvas_height - padding[1])
-        fade_length = int(canvas_height*0.51)
+        fade_length = int(canvas_height*0.6)
 
         self._apply_gradient(canvas, fg_color_hex,
                              lower_space, (0, canvas_height - fade_length))
