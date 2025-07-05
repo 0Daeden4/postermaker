@@ -132,7 +132,7 @@ class PostMaker():
 
     def _write_with_box(self, canvas: c.Canvas, text: str, font_path: str | Path, tex_pos: tuple[int, int],
                         color: str, font_size=20):
-        text = text.replace(r'\n', '\n').replace(r'\t', '\t')
+        text = text.replace(r'\n', '\n')
         font_name = self._register_font(font_path)
         lines = text.splitlines()
 
@@ -144,14 +144,14 @@ class PostMaker():
         canvas.setFillColor(HexColor(color))
         canvas.setFont(font_name, font_size)
 
-        for line in lines:
+        for line in reversed(lines):
             canvas.drawString(x, y, line)
             y += line_height_px
         canvas.restoreState()
 
     def _get_bbox(self, text: str, font_path: str | Path, font_size: float, loc: tuple[float, float]) -> dict[str, float]:
         font_name = self._register_font(font_path)
-        text = text.replace(r'\n', '\n').replace(r'\t', '\t')
+        text = text.replace(r'\n', '\n')
         lines = text.splitlines()
         line_count = len(lines)
         x, y = loc
@@ -184,7 +184,8 @@ class PostMaker():
         left_padding = (p_x + 55)
 
         # Title preloc
-        title_y = c_h - (p_y + title_size)
+        title_bbox = self._get_bbox(title, title_font, title_size, (0, 0))
+        title_y = c_h - (p_y + title_bbox["height"])
         title_loc = (left_padding, title_y)
         self.title_bbox = self._get_bbox(
             title, title_font, title_size, title_loc)
@@ -215,10 +216,10 @@ class PostMaker():
         # Compensate for conversion between PIL and svgwrite
         date_x, date_y = date_loc
         place_x, place_y = place_loc
-        compensation = 25
 
         # Desc preloc
-        desc_y = int(self.title_bbox["y"] - title_size - compensation)
+        desc_bbox = self._get_bbox(desc, desc_font, desc_size, (0, 0))
+        desc_y = int(self.title_bbox["y"] - desc_bbox["height"])
         desc_loc = (left_padding, desc_y)
         self.description_bbox = self._get_bbox(
             desc, desc_font, desc_size, desc_loc)
