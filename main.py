@@ -1,13 +1,11 @@
 from enum import Enum
-from PIL import ImageDraw, ImageOps, ImageFont, Image, ImageColor
+from PIL import ImageDraw, ImageOps, Image, ImageColor
 from argparse import ArgumentParser, Namespace
 from pathlib import Path
 from dataclasses import dataclass
 import re
 import qrcode
 from qrcode.constants import ERROR_CORRECT_M
-import base64
-import mimetypes
 from io import BytesIO
 from reportlab.pdfgen import canvas as c
 from reportlab.pdfbase import pdfmetrics
@@ -26,27 +24,30 @@ class EventInformation():
     place: tuple[str, str, int]
     date: tuple[str, str, int]
 
+@dataclass
+class PostInformation():
+    width: int
+    height: int
+    x_padding: int
+    y_padding: int
+
 
 class Posts(Enum):
-    IG_POST = (1080, 1350)
-    IG_STORY = (1080, 1920)
-    IG_REELS = (1080, 1920)
-    FB_POST = (1200, 1200)
-    FB_STORY = (1080, 1920)
-    FB_REELS = (1080, 1920)
-    X_POST = (1200, 675)
+    IG_POST =PostInformation(width=1080, height=1350, x_padding=0,y_padding= 135)
+    IG_STORY =PostInformation(width=1080, height=1920, x_padding=100,y_padding= 120)
+    IG_REELS = PostInformation(width=1080,height= 1920,x_padding= 0,y_padding= 0)
+    FB_POST  = PostInformation(width=1200,height= 1200,x_padding= 0,y_padding= 0)
+    FB_STORY  = PostInformation(width=1080,height= 1920,x_padding= 100,y_padding= 120)
+    FB_REELS = PostInformation(width=1080,height= 1920,x_padding= 0,y_padding= 0)
+    X_POST  = PostInformation(width=1200,height= 675,x_padding= 0,y_padding= 0)
 
 
 class PostMaker():
 
-    def _get_padding(self, canvas_type: Posts) -> tuple[int, int]:
-        canvas_name = canvas_type.name
-        if canvas_name == "IG_STORY" or canvas_name == "FB_STORY":
-            return (100, 120)
-        elif canvas_name == "IG_POST":
-            return (0, 135)
-        else:
-            return (0, 0)
+    def _get_padding(self, canvas_type: Posts | PostInformation) -> tuple[int, int]:
+        if isinstance(canvas_type, Posts):
+            canvas_type = canvas_type.value
+        return (canvas_type.x_padding, canvas_type.y_padding)
 
     def _place_bg_image(self, canvas: c.Canvas, bg_image: Path, padding: tuple[int, int]):
         c_width, c_height = canvas._pagesize
@@ -270,14 +271,16 @@ class PostMaker():
         gradient = ImageReader(buffer)
         canvas.drawImage(gradient, 0, starty, mask='auto')
 
-    def create(self, canvas_type: Posts, bg_color_hex: str, fg_color_hex: str,
+    def create(self, canvas_type: Posts | PostInformation, bg_color_hex: str, fg_color_hex: str,
                event_information: EventInformation, link: str,
                bg_image: Path | None = None, logo_image: Path | None = None, savedir: str = ".") -> None:
 
         # TODO: Check validity of hex code
-        canvas_height = canvas_type.value[1]
-        canvas_width = canvas_type.value[0]
-        file_name = self._create_file_name(canvas_type.name, event_information)
+        if isinstance(canvas_type , Posts):
+            canvas_type = canvas_type.value
+        canvas_height = canvas_type.height
+        canvas_width = canvas_type.width
+        file_name = self._create_file_name(f"{canvas_width}x{canvas_height}", event_information)
         file_name = str(Path(savedir).resolve()/file_name)
 
         # TODO: fix this
@@ -320,18 +323,18 @@ class PostMaker():
             logo = Image.open(logo_image)
             self._place_logo(canvas, logo, link)
 
-        self.save_image(canvas, file_name)
+        self.save_image(canvas, file_name, (canvas_width, canvas_height))
 
     def _create_file_name(self, canvas_type: str, even_information: EventInformation) -> str:
         def _safer(s: str):
             return re.sub(r'[^A-Za-z0-9.._-]', '_', s)
         return f"{_safer(even_information.title[0])}_{_safer(even_information.date[0])}_{_safer(canvas_type)}"
 
-    def save_image(self, canvas: c.Canvas, file_name: str | Path) -> None:
+    def save_image(self, canvas: c.Canvas, file_name: str | Path , size: tuple[int,int]) -> None:
         canvas.save()
         if not isinstance(file_name, Path):
             file_name = Path(file_name)
-        images = convert_from_path(f"{file_name}.pdf", dpi=300)
+        images = convert_from_path(f"{file_name}.pdf", dpi=300, size=size)
         images[0].save(f"{file_name}.png", "PNG")
 
 
@@ -362,7 +365,10 @@ def main(args: Namespace):
         place=(args.place, args.place_font, args.place_size),
     )
 
-    if args.canvas:
+    if args.width and args.height:
+        postmaker.create(PostInformation(args.width, args.height, args.xpadding, args.ypadding), args.bgcolor,
+                         args.fgcolor, event_information, args.link, background_image, logo_image, args.savedir)
+    elif args.canvas:
         postmaker.create(Posts[args.canvas], args.bgcolor,
                          args.fgcolor, event_information, args.link, background_image, logo_image, args.savedir)
     else:
@@ -485,6 +491,28 @@ if __name__ == "__main__":
         type=str,
         default="PlaceholderLink",
         help="QR kodu oluşturulacak olan link"
+    )
+    parser.add_argument(
+        "--width", "-w",
+        type=int,
+        help="Görsel'in genişliği"
+    )
+    parser.add_argument(
+        "--height", "-he",
+        type=int,
+        help="Görsel'in yüksekliği"
+    )
+    parser.add_argument(
+        "--xpadding", "-xp",
+        type=int,
+        default=0,
+        help="Görsel'in x paddingi"
+    )
+    parser.add_argument(
+        "--ypadding", "-yp",
+        type=int,
+        default=0,
+        help="Görsel'in y paddingi"
     )
     args = parser.parse_args()
     main(args)
