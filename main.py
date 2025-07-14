@@ -58,7 +58,7 @@ class PostMaker():
             canvas_type = canvas_type.value
         return (canvas_type.x_padding, canvas_type.y_padding, canvas_type.text_padding)
 
-    def _place_bg_image(self, canvas: c.Canvas, bg_image: Path, padding: tuple[int, int]):
+    def _place_bg_image(self, canvas: c.Canvas, bg_image: Path, padding: tuple[int, int] | tuple[int, int, int]):
         c_width, c_height = canvas._pagesize
         desired_size = (c_width, c_height - (2 * padding[1]))
         image = Image.open(bg_image)
@@ -281,25 +281,11 @@ class PostMaker():
         gradient = ImageReader(buffer)
         canvas.drawImage(gradient, 0, starty, mask='auto')
 
-    def create(self, canvas_type: Posts | PostInformation, bg_color_hex: str, fg_color_hex: str,
-               event_information: EventInformation, qr: str,
-               bg_image: Path | None = None, logo_image: Path | None = None, savedir: str = ".") -> None:
+    def _place_elements(self, canvas: c.Canvas, bg_color_hex: str, fg_color_hex: str,
+                        event_information: EventInformation, qr: str,
+                        padding: tuple[int, int, int], bg_image: Path | None = None, logo_image: Path | None = None) -> c.Canvas:
 
-        # TODO: Check validity of hex code
-        if isinstance(canvas_type, Posts):
-            canvas_type = canvas_type.value
-        canvas_height = canvas_type.height
-        canvas_width = canvas_type.width
-        file_name = self._create_file_name(
-            f"{canvas_width}x{canvas_height}", event_information)
-        file_name = str(Path(savedir).resolve()/file_name)
-
-        # TODO: fix this
-        canvas = c.Canvas(
-            f"{file_name}.pdf", pagesize=(canvas_width, canvas_height), pdfVersion=(1, 4))
-
-        padding = self._get_padding(canvas_type)
-
+        canvas_width, canvas_height = canvas._pagesize
         if bg_image:
             self._place_bg_image(canvas, bg_image, padding)
 
@@ -333,6 +319,30 @@ class PostMaker():
         if logo_image:
             logo = Image.open(logo_image)
             self._place_logo(canvas, logo, qr)
+
+        return canvas
+
+    def create(self, canvas_type: Posts | PostInformation, bg_color_hex: str, fg_color_hex: str,
+               event_information: EventInformation, qr: str,
+               bg_image: Path | None = None, logo_image: Path | None = None, savedir: str = ".") -> None:
+
+        # TODO: Check validity of hex code
+        if isinstance(canvas_type, Posts):
+            canvas_type = canvas_type.value
+        canvas_height = canvas_type.height
+        canvas_width = canvas_type.width
+        file_name = self._create_file_name(
+            f"{canvas_width}x{canvas_height}", event_information)
+        file_name = str(Path(savedir).resolve()/file_name)
+
+        # TODO: fix this
+        canvas = c.Canvas(
+            f"{file_name}.pdf", pagesize=(canvas_width, canvas_height), pdfVersion=(1, 4))
+
+        padding = self._get_padding(canvas_type)
+
+        canvas = self._place_elements(canvas, bg_color_hex, fg_color_hex,
+                                      event_information, qr, padding, bg_image, logo_image)
 
         self.save_image(canvas, file_name, (canvas_width, canvas_height))
 
