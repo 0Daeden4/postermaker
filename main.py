@@ -200,7 +200,6 @@ class PostMaker():
         _, canvas_height = canvas._pagesize
         x_padding, y_padding, text_padding = padding
         left_padding = x_padding
-        self.canvas = canvas
 
         # Title preloc
         title_bbox = self._get_bbox(title, title_font, title_size, (0, 0))
