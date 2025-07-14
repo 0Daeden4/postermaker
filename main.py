@@ -140,47 +140,56 @@ class PostMaker():
         pdfmetrics.registerFont(TTFont(font_name, font_path.resolve()))
         return font_name
 
-    def _write_with_box(self, canvas: c.Canvas, text: str, font_path: str | Path, tex_pos: tuple[int, int],
+    def _write_with_box(self, canvas: c.Canvas, text: str, font_path: str | Path, text_pos: tuple[int, int],
                         color: str, font_size=20):
         text = text.replace(r'\n', '\n')
         font_name = self._register_font(font_path)
         lines = text.splitlines()
 
-        x, _ = tex_pos
-        line_height_px = font_size * 1.0
+        ascent = pdfmetrics.getAscent(font_name, font_size)
+        descent = pdfmetrics.getDescent(font_name, font_size)
+        line_height_px = ascent - descent
 
         canvas.saveState()
-        x, y = tex_pos
+        x, y_bottom = text_pos
         canvas.setFillColor(HexColor(color))
         canvas.setFont(font_name, font_size)
 
+        y_top = y_bottom - descent
+        first_line = lines[0]
         for line in reversed(lines):
-            canvas.drawString(x, y, line)
-            y += line_height_px
+            canvas.drawString(x, y_top, line)
+            if line == first_line:
+                y_top += ascent
+            else:
+                y_top += line_height_px
+
         canvas.restoreState()
 
-    # AI Generated
     def _get_bbox(self, text: str, font_path: str | Path, font_size: float, loc: tuple[float, float]) -> dict[str, float]:
+        ''' Always below descent amount of pixels of the specified location. You can use the same function with location (0,0) to find it out.'''
         font_name = self._register_font(font_path)
         text = text.replace(r'\n', '\n')
         lines = text.splitlines()
         line_count = len(lines)
         x, y = loc
         width = stringWidth(text, font_name, font_size)
-        ascent = pdfmetrics.getAscent(font_name) * font_size / 1000.0
-        descent = pdfmetrics.getDescent(font_name) * font_size / 1000.0
+        ascent = pdfmetrics.getAscent(font_name, font_size)
+        descent = pdfmetrics.getDescent(font_name, font_size)
         line_height = ascent - descent
 
         width = max(stringWidth(line, font_name, font_size) for line in lines)
 
         height = line_count * line_height
 
-        # canvas.rect(x, y, width, height)
+        y += descent
         return {
             "x": x,
-            "y": y - descent,
+            "y": y,
             "width": width,
-            "height": height
+            "height": height,
+            "ascent": ascent,
+            "descent": descent
         }
 
     def _write_event_info(self, canvas: c.Canvas, event_info: EventInformation, color_1: str, color_2: str, padding: tuple[int, int, int]):
@@ -188,59 +197,56 @@ class PostMaker():
         place, place_font, place_size = event_info.place
         date, date_font, date_size = event_info.date
         desc, desc_font, desc_size = event_info.desc
-        _, c_h = canvas._pagesize
+        _, canvas_height = canvas._pagesize
         x_padding, y_padding, text_padding = padding
-        bottom_padding = y_padding
         left_padding = x_padding
+        self.canvas = canvas
 
         # Title preloc
         title_bbox = self._get_bbox(title, title_font, title_size, (0, 0))
-        title_y = c_h - (y_padding + title_bbox["height"])
+        title_y = canvas_height - (y_padding + title_bbox["height"])
         title_loc = (left_padding, title_y)
         self.title_bbox = self._get_bbox(
             title, title_font, title_size, title_loc)
 
-        # Place preloc
-        place_loc = (left_padding, bottom_padding + place_size)
-        self.place_bbox = self._get_bbox(
-            place, place_font, place_size, place_loc)
-
-        # Date preloc
-        date_bbox = self._get_bbox(date, date_font, date_size, (0, 0))
-        date_loc = (left_padding, int(
-            self.place_bbox["y"] - date_bbox["height"] - text_padding))
-        self.date_bbox = self._get_bbox(date, date_font, date_size, date_loc)
-
-        while self.date_bbox["y"] - y_padding < 0:
-            place_loc = (left_padding, place_loc[1]+1)
-            self.place_bbox = self._get_bbox(
-                place, place_font, place_size, place_loc)
-            date_loc = (
-                left_padding, self.place_bbox["y"] - date_bbox["height"] - text_padding)
-            self.date_bbox = self._get_bbox(
-                date, date_font, date_size, date_loc)
-
-        date_x, date_y = date_loc
-        place_x, place_y = place_loc
-
         # Desc preloc
-        desc_bbox = self._get_bbox(desc, desc_font, desc_size, (0, 0))
-        desc_y = int(self.title_bbox["y"] - desc_bbox["height"] - text_padding)
+        description_bbox = self._get_bbox(desc, desc_font, desc_size, (0, 0))
+        desc_y = int(self.title_bbox["y"] -
+                     description_bbox["height"] - description_bbox["descent"] - text_padding)
         desc_loc = (left_padding, desc_y)
         self.description_bbox = self._get_bbox(
             desc, desc_font, desc_size, desc_loc)
+
+        # Date preloc
+        date_loc = (left_padding, y_padding)
+        self.date_bbox = self._get_bbox(date, date_font, date_size, date_loc)
+
+        # Place preloc
+        place_bbox = self._get_bbox(
+            place, place_font, place_size, (0, 0))
+        place_loc = (
+            left_padding, self.date_bbox["y"] + self.date_bbox["height"] - place_bbox["descent"] + text_padding)
+        self.place_bbox = self._get_bbox(
+            place, place_font, place_size, place_loc)
+
+        title_pos = (int(self.title_bbox["x"]), int(self.title_bbox["y"]))
+        desc_pos = (int(self.description_bbox["x"]), int(
+            self.description_bbox["y"]))
+        date_pos = (int(self.date_bbox["x"]), int(self.date_bbox["y"]))
+        place_pos = (int(self.place_bbox["x"]), int(self.place_bbox["y"]))
+
         # Title
         self._write_with_box(canvas, title, title_font,
-                             title_loc, color_1, font_size=title_size)
+                             title_pos, color_1, font_size=title_size)
         # Description
         self._write_with_box(canvas, desc, desc_font,
-                             desc_loc, color_1, font_size=desc_size)
+                             desc_pos, color_1, font_size=desc_size)
         # Place
         self._write_with_box(canvas, place, place_font,
-                             (place_x, int(place_y)), color_2, font_size=place_size)
+                             place_pos, color_2, font_size=place_size)
         # Date
         self._write_with_box(canvas, date, date_font,
-                             (date_x, int(date_y)), color_2, font_size=date_size)
+                             date_pos, color_2, font_size=date_size)
 
     def _create_cubic_bezier(self, p1: float, p2: float, p3: float, p4: float) -> Callable[[float], float]:
         return lambda t: p1*(1-t)**3 + t*3*p2*(1-t)**2 + (t**2)*p3*(1-t)*3 + p4*t**3
