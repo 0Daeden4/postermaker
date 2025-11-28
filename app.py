@@ -57,37 +57,35 @@ def get_fonts() -> dict[str, Path] | None:
     return fonts
 
 
-class Text_Field():
-
-    def __call__(self, label: str, title: str, size_value: int = 1) -> None:
-        """
-        sets:
-            st.session_state[label]_content
-            st.session_state[label]_size_int
-            st.session_state[label]_font
-        """
-        col1, col2, col3 = st.columns(3)
-        with col1:
-            st.text_area(
-                f"Etkinlik için {title}",
-                key=label+"_content"
-            )
-        with col2:
-            st.number_input(
-                title + " Boyutu",
-                key=label+"_size_int",
-                value=size_value,
-                min_value=1
-            )
-        with col3:
-            fonts = get_fonts()
-            if not fonts:
-                st.error("No fonts were found in the Fonts folder!")
-            else:
-                st.selectbox(
-                    "Fontlar",
-                    fonts.keys(),
-                    key=label+"_font")
+def text_input(label: str, title: str, size_value: int = 1) -> None:
+    """
+    sets:
+        st.session_state[label]_content
+        st.session_state[label]_size_int
+        st.session_state[label]_font
+    """
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        st.text_area(
+            f"Etkinlik için {title}",
+            key=label+"_content"
+        )
+    with col2:
+        st.number_input(
+            title + " Boyutu",
+            key=label+"_size_int",
+            value=size_value,
+            min_value=1
+        )
+    with col3:
+        fonts = get_fonts()
+        if not fonts:
+            st.error("No fonts were found in the Fonts folder!")
+        else:
+            st.selectbox(
+                "Fontlar",
+                fonts.keys(),
+                key=label+"_font")
 
 
 def execute_script():
@@ -154,7 +152,6 @@ if __name__ == "__main__":
 
     st.title("Poster Yapıcı")
 
-    text_input = Text_Field()
     text_input("title", "Başlık", 200)
     text_input("description", "Açıklama", 90)
     text_input("place", "Adres", 100)
