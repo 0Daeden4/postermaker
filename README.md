@@ -1,7 +1,13 @@
 # Çalıştırmak için:
 
+Garfik arayüzü için:
 ```
 streamlit run app.py
+```
+
+Command Line Interface i\cin:
+```
+python main.py ...
 ```
 
 # Yapılacaklar:
