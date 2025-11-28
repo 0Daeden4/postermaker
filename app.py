@@ -2,6 +2,7 @@ import streamlit as st
 from streamlit.runtime.uploaded_file_manager import UploadedFile
 from pathlib import Path
 from postermakerClass import PostMaker, EventInformation, PostInformation, Posts
+from os import path
 
 
 def display_generated_image(generated_posters_path: Path):
@@ -22,8 +23,11 @@ def save_file(file: UploadedFile, directory: str) -> None:
     save_path.mkdir(exist_ok=True)
     file_path = save_path / file.name
 
-    with open(file_path, "wb") as f:
-        f.write(file.getvalue())
+    if not path.isfile(file_path):
+        print(
+            f"Saved {file.name} to {save_path}")
+        with open(file_path, "wb") as f:
+            f.write(file.getvalue())
 
 
 def upload_image(label: str, upload_desc: str, display_desc, file_directory_name: str) -> None:
@@ -33,12 +37,12 @@ def upload_image(label: str, upload_desc: str, display_desc, file_directory_name
         accept_multiple_files=False,
         key=label
     )
+
     if st.session_state[label]:
         save_file(st.session_state[label], file_directory_name)
-        print(
-            f"Saved {st.session_state[label].name} to {file_directory_name}")
         st.image(st.session_state[label],
                  caption=display_desc)
+        st.session_state[label + "_prev"] = st.session_state[label]
 
 
 def get_fonts() -> dict[str, Path] | None:
