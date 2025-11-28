@@ -10,5 +10,6 @@ streamlit run app.py
 - ~~Custom çözünürlük ve padding ayarı~~
 - ~~Font auto-detection~~
 - ~~png ve pdf export'u~~
+- QR kodunun aspect ratio'su yüklenen logo ile değişmemeli
 
 
